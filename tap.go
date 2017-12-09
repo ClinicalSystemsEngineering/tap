@@ -45,7 +45,7 @@ func createtapmsg(pin string, textmsg string) string {
 }
 
 //Server starts a Tap server using portnum as the port or 10001 if not specified
-func Server(msgchan <-chan string, portnum string) {
+func Server(msgchan chan string, portnum string) {
 	log.Printf("STARTING TAP listener on tcp port %v...\n\n", portnum)
 	tap, err := net.Listen("tcp", ":"+portnum)
 		if err != nil {
@@ -63,7 +63,7 @@ func Server(msgchan <-chan string, portnum string) {
 			log.Print(err.Error())
 
 		}
-		go func(c net.Conn, parsedmsgsqueue <-chan string) {
+		go func(c net.Conn, parsedmsgsqueue chan string) {
 			//	fmt.Print("\n\nAccepted TAP connection Started TAP output routine..\n\n")
 			r := bufio.NewReader(c)
 
@@ -149,6 +149,8 @@ func Server(msgchan <-chan string, portnum string) {
 						if err != nil {
 							//fmt.Printf("\n\nerror reading response from tap server\n\n")
 							log.Print(err.Error())
+							log.Print("Placing %v back on the queue.",msg)
+							parsedmsgsqueue <- msg
 							c.Close()
 							return
 
