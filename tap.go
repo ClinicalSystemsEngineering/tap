@@ -149,7 +149,7 @@ func Server(msgchan chan string, portnum string) {
 						if err != nil {
 							//fmt.Printf("\n\nerror reading response from tap server\n\n")
 							log.Print(err.Error())
-							log.Printf("Placing %v back on the queue.",msg)
+							log.Printf("Placing %v back on the queue.\n",msg)
 							parsedmsgsqueue <- msg
 							c.Close()
 							return
