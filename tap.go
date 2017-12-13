@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 	"time"
+	
 )
 
 //take a pin and textmsg and return a correctly formatted TAP message
@@ -59,9 +60,9 @@ func Server(msgchan chan string, portnum string) {
 		tapconn, err := tap.Accept()
 		if err != nil {
 			//	fmt.Println("Error accepting a TAP connection, check log for details")
+			log.Println(err.Error())
 			tapconn.Close()
-			log.Print(err.Error())
-
+			
 		}
 		go func(c net.Conn, parsedmsgsqueue chan string) {
 			//	fmt.Print("\n\nAccepted TAP connection Started TAP output routine..\n\n")
@@ -82,7 +83,7 @@ func Server(msgchan chan string, portnum string) {
 				response, err := r.ReadString('\r')
 				if err != nil {
 					//fmt.Printf("\n\nerror reading response from tap server\n\n")
-					log.Print(err.Error())
+					log.Println(err.Error())
 					c.Close()
 					return
 				}
@@ -95,7 +96,7 @@ func Server(msgchan chan string, portnum string) {
 				response, err = r.ReadString('\r')
 				if err != nil {
 					//fmt.Printf("\n\nerror reading response from tap server\n\n")
-					log.Print(err.Error())
+					log.Println(err.Error())
 					c.Close()
 					return
 				}
@@ -103,7 +104,7 @@ func Server(msgchan chan string, portnum string) {
 				response, err = r.ReadString('\r')
 				if err != nil {
 					//fmt.Printf("\n\nerror reading response from tap server\n\n")
-					log.Print(err.Error())
+					log.Println(err.Error())
 					c.Close()
 					return
 				}
@@ -111,7 +112,7 @@ func Server(msgchan chan string, portnum string) {
 				response, err = r.ReadString('\r')
 				if err != nil {
 					//fmt.Printf("\n\nerror reading response from tap server\n\n")
-					log.Print(err.Error())
+					log.Println(err.Error())
 					c.Close()
 					return
 				}
@@ -119,7 +120,7 @@ func Server(msgchan chan string, portnum string) {
 				response, err = r.ReadString('\r')
 				if err != nil {
 					//fmt.Printf("\n\nerror reading response from tap server\n\n")
-					log.Print(err.Error())
+					log.Println(err.Error())
 					c.Close()
 					return
 				}
@@ -148,19 +149,20 @@ func Server(msgchan chan string, portnum string) {
 						response, err := r.ReadString('\r')
 						if err != nil {
 							//fmt.Printf("\n\nerror reading response from tap server\n\n")
-							log.Print(err.Error())
-							log.Printf("Placing %v back on the queue.\n",msg)
+							log.Println(err.Error())
+							log.Printf("Placing %v back on the TAP queue.\n",msg)
 							parsedmsgsqueue <- msg
 							c.Close()
 							return
 
 						}
+						log.Println("Sent <%v> to TAP client",tapmsg)
 						//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //should be coded response
 
 						response, err = r.ReadString('\r')
 						if err != nil {
 							//fmt.Printf("\n\nerror reading response from tap server")
-							log.Print(err.Error())
+							log.Println(err.Error())
 							c.Close()
 							return
 						}
@@ -179,7 +181,7 @@ func Server(msgchan chan string, portnum string) {
 					response, err := r.ReadString('\r')
 					if err != nil {
 						//fmt.Printf("\n\nerror reading response from tap server")
-						log.Print(err.Error())
+						log.Println(err.Error())
 						c.Close()
 						return
 					}
@@ -192,14 +194,14 @@ func Server(msgchan chan string, portnum string) {
 					response, err = r.ReadString('\r')
 					if err != nil {
 						//fmt.Printf("\n\nerror reading response from tap server\n\n")
-						log.Print(err.Error())
+						log.Println(err.Error())
 						c.Close()
 						return
 					}
 					response, err = r.ReadString('\r')
 					if err != nil {
 						//fmt.Printf("\n\nerror reading response from tap server\n\n")
-						log.Print(err.Error())
+						log.Println(err.Error())
 						c.Close()
 						return
 					}
@@ -207,7 +209,7 @@ func Server(msgchan chan string, portnum string) {
 					response, err = r.ReadString('\r')
 					if err != nil {
 						//fmt.Printf("\n\nerror reading response from tap server\n\n")
-						log.Print(err.Error())
+						log.Println(err.Error())
 						c.Close()
 						return
 					}
@@ -215,7 +217,7 @@ func Server(msgchan chan string, portnum string) {
 					response, err = r.ReadString('\r')
 					if err != nil {
 						//fmt.Printf("\n\nerror reading response from tap server\n\n")
-						log.Print(err.Error())
+						log.Println(err.Error())
 						c.Close()
 						return
 					}
