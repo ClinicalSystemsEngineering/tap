@@ -156,7 +156,7 @@ func Server(msgchan chan string, portnum string) {
 							return
 
 						}
-						log.Println("Sent <%v> to TAP client",tapmsg)
+						log.Printf("Sent <%v> to TAP client\n",tapmsg)
 						//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //should be coded response
 
 						response, err = r.ReadString('\r')
