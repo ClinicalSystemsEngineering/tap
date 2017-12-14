@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 	"time"
-	
+	"strconv"
 )
 
 //take a pin and textmsg and return a correctly formatted TAP message
@@ -156,7 +156,7 @@ func Server(msgchan chan string, portnum string) {
 							return
 
 						}
-						log.Printf("Sent <%v> to TAP client\n",tapmsg)
+						log.Printf("Sent <%v> to TAP client\n",strconv.QuoteToASCII(tapmsg))
 						//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //should be coded response
 
 						response, err = r.ReadString('\r')
