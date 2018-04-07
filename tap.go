@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 )
 
 //take a pin and textmsg and return a correctly formatted TAP message
@@ -48,25 +48,27 @@ func createtapmsg(pin string, textmsg string) string {
 //Server starts a Tap server using portnum as the port or 10001 if not specified
 func Server(msgchan chan string, portnum string) {
 	log.Printf("STARTING TAP listener on tcp port %v...\n\n", portnum)
+	timeoutDuration := 5 * time.Second
+
 	tap, err := net.Listen("tcp", ":"+portnum)
-		if err != nil {
-			//	fmt.Println("Error opening tap output, check log for details")
-			log.Fatal(err)
-		}
+	if err != nil {
+		//	fmt.Println("Error opening tap output, check log for details")
+		log.Fatal(err)
+	}
 	defer tap.Close()
-	
+
 	//==========================================================================
 	for {
 		tapconn, err := tap.Accept()
 		if err != nil {
-			
-			log.Printf("Error accepting a TAP connection: %v\n",err.Error())
+
+			log.Printf("Error accepting a TAP connection: %v\n", err.Error())
 			log.Println("Closing connection and awaiting new connection.")
 			tapconn.Close()
-			
+
 		}
 		go func(c net.Conn, parsedmsgsqueue chan string) {
-			//	fmt.Print("\n\nAccepted TAP connection Started TAP output routine..\n\n")
+
 			r := bufio.NewReader(c)
 
 			init := true
@@ -76,15 +78,22 @@ func Server(msgchan chan string, portnum string) {
 			nak := rune(21)
 
 			if init == true { //initialize the tap server
-				//fmt.Print("\n\nStarting TAP init.\n\n")
+
 			RetryInit:
 
-				c.Write([]byte("BYE\r\r"))
-				//fmt.Printf("\n\nTried to write to TAP output<CR>\n\n")
+				c.SetWriteDeadline(time.Now().Add(timeoutDuration))
+				_, err = c.Write([]byte("BYE\r\r"))
+				if err != nil {
+					log.Printf("Error writing BYE from TAP client: %v\n", err.Error())
+					log.Println("Closing connection and awaiting new connection.")
+					c.Close()
+					return
+				}
+				c.SetReadDeadline(time.Now().Add(timeoutDuration))
 				response, err := r.ReadString('\r')
 				if err != nil {
-					
-					log.Printf("Error reading response from TAP client: %v\n",err.Error())
+
+					log.Printf("Error reading response from TAP client: %v\n", err.Error())
 					log.Println("Closing connection and awaiting new connection.")
 					c.Close()
 					return
@@ -94,38 +103,49 @@ func Server(msgchan chan string, portnum string) {
 					goto RetryInit
 				}
 
-				c.Write([]byte(string(esc) + "PG1\r"))
+				c.SetWriteDeadline(time.Now().Add(timeoutDuration))
+				_, err = c.Write([]byte(string(esc) + "PG1\r"))
+				if err != nil {
+					log.Printf("Error writing PG1 from TAP client: %v\n", err.Error())
+					log.Println("Closing connection and awaiting new connection.")
+					c.Close()
+					return
+				}
+				c.SetReadDeadline(time.Now().Add(timeoutDuration))
 				response, err = r.ReadString('\r')
 				if err != nil {
-					
-					log.Printf("Error reading response from TAP client: %v\n",err.Error())
+
+					log.Printf("Error reading response from TAP client: %v\n", err.Error())
 					log.Println("Closing connection and awaiting new connection.")
 					c.Close()
 					return
 				}
 				//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response))
+				c.SetReadDeadline(time.Now().Add(timeoutDuration))
 				response, err = r.ReadString('\r')
 				if err != nil {
-					
-					log.Printf("Error reading response from TAP client: %v\n",err.Error())
+
+					log.Printf("Error reading response from TAP client: %v\n", err.Error())
 					log.Println("Closing connection and awaiting new connection.")
 					c.Close()
 					return
 				}
 				//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //response should be 110 1.8
+				c.SetReadDeadline(time.Now().Add(timeoutDuration))
 				response, err = r.ReadString('\r')
 				if err != nil {
-					
-					log.Printf("Error reading response from TAP client: %v\n",err.Error())
+
+					log.Printf("Error reading response from TAP client: %v\n", err.Error())
 					log.Println("Closing connection and awaiting new connection.")
 					c.Close()
 					return
 				}
 				//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //response should be optional message
+				c.SetReadDeadline(time.Now().Add(timeoutDuration))
 				response, err = r.ReadString('\r')
 				if err != nil {
-					
-					log.Printf("Error reading response from TAP client: %v\n",err.Error())
+
+					log.Printf("Error reading response from TAP client: %v\n", err.Error())
 					log.Println("Closing connection and awaiting new connection.")
 					c.Close()
 					return
@@ -151,24 +171,34 @@ func Server(msgchan chan string, portnum string) {
 						tapmsg := createtapmsg(pin, text)
 					RetryMsg:
 
-						c.Write([]byte(tapmsg))
+						c.SetWriteDeadline(time.Now().Add(timeoutDuration))
+						_, err = c.Write([]byte(tapmsg))
+						if err != nil {
+							log.Printf("Error writing PG1 from TAP client: %v\n", err.Error())
+							log.Println("Closing connection and awaiting new connection.")
+							parsedmsgsqueue <- msg
+							c.Close()
+							return
+						}
+
+						c.SetReadDeadline(time.Now().Add(timeoutDuration))
 						response, err := r.ReadString('\r')
 						if err != nil {
-							
-							log.Printf("Error reading response from TAP client: %v\n",err.Error())
-							log.Printf("Placing %v back on the TAP queue.\n",msg)
+
+							log.Printf("Error reading response from TAP client: %v\n", err.Error())
+							log.Printf("Placing %v back on the TAP queue.\n", msg)
 							parsedmsgsqueue <- msg
 							log.Println("Closing connection and awaiting new connection.")
 							c.Close()
 							return
 
 						}
-						log.Printf("Sent <%v> to TAP client\n",strconv.QuoteToASCII(tapmsg))
+						log.Printf("Sent <%v> to TAP client\n", strconv.QuoteToASCII(tapmsg))
 						//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //should be coded response
-
+						c.SetReadDeadline(time.Now().Add(timeoutDuration))
 						response, err = r.ReadString('\r')
 						if err != nil {
-							log.Printf("Error reading response from TAP client: %v\n",err.Error())
+							log.Printf("Error reading response from TAP client: %v\n", err.Error())
 							log.Println("Closing connection and awaiting new connection.")
 							c.Close()
 							return
@@ -184,12 +214,20 @@ func Server(msgchan chan string, portnum string) {
 				RetryKA:
 					//fmt.Printf("\n\nNo tap value ready, moving on with keep alive.\n\n")
 
-					c.Write([]byte("\r"))
+					c.SetWriteDeadline(time.Now().Add(timeoutDuration))
+					_, err = c.Write([]byte("\r"))
+					if err != nil {
+						log.Printf("Error writing <CR> from TAP client: %v\n", err.Error())
+						log.Println("Closing connection and awaiting new connection.")
+						c.Close()
+						return
+					}
+					c.SetReadDeadline(time.Now().Add(timeoutDuration))
 					response, err := r.ReadString('\r')
 					if err != nil {
-						log.Printf("Error reading response from TAP client: %v\n",err.Error())
+						log.Printf("Error reading response from TAP client: %v\n", err.Error())
 						log.Println("Closing connection and awaiting new connection.")
-					 	c.Close()
+						c.Close()
 						return
 					}
 					//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response))
@@ -197,33 +235,44 @@ func Server(msgchan chan string, portnum string) {
 						goto RetryKA
 					}
 
-					c.Write([]byte(string(esc) + "PG1\r"))
-					response, err = r.ReadString('\r')
+					c.SetWriteDeadline(time.Now().Add(timeoutDuration))
+					_, err = c.Write([]byte(string(esc) + "PG1\r"))
 					if err != nil {
-						log.Printf("Error reading response from TAP client: %v\n",err.Error())
+						log.Printf("Error writing PG1 from TAP client: %v\n", err.Error())
 						log.Println("Closing connection and awaiting new connection.")
 						c.Close()
 						return
 					}
+					c.SetReadDeadline(time.Now().Add(timeoutDuration))
 					response, err = r.ReadString('\r')
 					if err != nil {
-						log.Printf("Error reading response from TAP client: %v\n",err.Error())
+						log.Printf("Error reading response from TAP client: %v\n", err.Error())
+						log.Println("Closing connection and awaiting new connection.")
+						c.Close()
+						return
+					}
+					c.SetReadDeadline(time.Now().Add(timeoutDuration))
+					response, err = r.ReadString('\r')
+					if err != nil {
+						log.Printf("Error reading response from TAP client: %v\n", err.Error())
 						log.Println("Closing connection and awaiting new connection.")
 						c.Close()
 						return
 					}
 					//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //response should be 110 1.8
+					c.SetReadDeadline(time.Now().Add(timeoutDuration))
 					response, err = r.ReadString('\r')
 					if err != nil {
-						log.Printf("Error reading response from TAP client: %v\n",err.Error())
+						log.Printf("Error reading response from TAP client: %v\n", err.Error())
 						log.Println("Closing connection and awaiting new connection.")
 						c.Close()
 						return
 					}
 					//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //response should be optional message
+					c.SetReadDeadline(time.Now().Add(timeoutDuration))
 					response, err = r.ReadString('\r')
 					if err != nil {
-						log.Printf("Error reading response from TAP client: %v\n",err.Error())
+						log.Printf("Error reading response from TAP client: %v\n", err.Error())
 						log.Println("Closing connection and awaiting new connection.")
 						c.Close()
 						return
