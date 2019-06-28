@@ -252,9 +252,10 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 			}
 		default:
 			if init == true {
+				init = false
 				log.Println("No message to process on queue sleeping 5 sec...")
 				time.Sleep(5 * time.Second)
-				init = false
+
 			} else {
 				log.Println("No message to process on queue sleeping 5 sec...")
 				time.Sleep(5 * time.Second)
