@@ -207,6 +207,9 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 			if ok {
 				init = initTap(c)//initialize tap server to receive messages
 				if init == false{
+					log.Printf("Placing %v back on the TAP queue.\n", msg)
+					parsedmsgsqueue <- msg
+					log.Println("Closing connection and awaiting new connection.")
 					return
 				}
 				splitmsg := strings.Split(msg, ";")
@@ -233,6 +236,8 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 				response, err := r.ReadString('\r')
 				if err != nil {
 					log.Printf("Error reading ack/nak response from TAP client: %v\n", err.Error())
+					log.Printf("Placing %v back on the TAP queue.\n", msg)
+					parsedmsgsqueue <- msg
 					log.Println("Closing connection and awaiting new connection.")
 					c.Close()
 					return
