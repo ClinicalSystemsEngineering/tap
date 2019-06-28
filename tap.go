@@ -202,12 +202,15 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 		select {
 		case msg, ok := <-parsedmsgsqueue:
 			if ok {
-				init = initTap(c) //initialize tap server to receive messages
+
 				if init == false {
-					log.Printf("Placing %v back on the TAP queue.\n", msg)
-					parsedmsgsqueue <- msg
-					log.Println("Closing connection and awaiting new connection.")
-					return
+					init = initTap(c)  //initialize tap server to receive messages
+					if init == false { //there was an issue with init
+						log.Printf("Placing %v back on the TAP queue.\n", msg)
+						parsedmsgsqueue <- msg
+						log.Println("Closing connection and awaiting new connection.")
+						return
+					}
 				}
 				splitmsg := strings.Split(msg, ";")
 				pin, text := splitmsg[0], splitmsg[1]
