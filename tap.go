@@ -91,7 +91,7 @@ RetryInit:
 		return false
 	}
 	c.SetReadDeadline(time.Now().Add(timeoutDuration))
-	num, err := c.Read(bytes)
+	num, err := r.Read(bytes)
 	if err != nil {
 
 		log.Printf("Error reading response ID= from TAP connection: %v\n", err.Error())
