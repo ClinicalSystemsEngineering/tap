@@ -66,7 +66,7 @@ func Client(msgchan chan string, serverAdr string) {
 	}
 
 }
-func initTap(c net.Conn) bool{
+func initTap(c net.Conn) bool {
 
 	timeoutDuration := 5 * time.Second
 
@@ -78,135 +78,132 @@ func initTap(c net.Conn) bool{
 	//nak := rune(21)
 	//nullrune := rune(0)
 
-	bytes := make([]byte,100)
+	bytes := make([]byte, 100)
 
-	
-	RetryInit:
-		log.Println("Writing <CR> to TAP connection")
-		c.SetWriteDeadline(time.Now().Add(timeoutDuration))
-		_, err := c.Write([]byte("\r"))
-		if err != nil {
-			log.Printf("Error writing <CR> on TAP connection: %v\n", err.Error())
-			log.Println("Closing connection and awaiting new connection.")
-			c.Close()
-			return false
-		}
-		c.SetReadDeadline(time.Now().Add(timeoutDuration))
-		num, err := c.Read(bytes)
-		if err != nil {
+RetryInit:
+	log.Println("Writing <CR> to TAP connection")
+	c.SetWriteDeadline(time.Now().Add(timeoutDuration))
+	_, err := c.Write([]byte("\r"))
+	if err != nil {
+		log.Printf("Error writing <CR> on TAP connection: %v\n", err.Error())
+		log.Println("Closing connection and awaiting new connection.")
+		c.Close()
+		return false
+	}
+	c.SetReadDeadline(time.Now().Add(timeoutDuration))
+	num, err := c.Read(bytes)
+	if err != nil {
 
-			log.Printf("Error reading response ID= from TAP connection: %v\n", err.Error())
-			log.Println("Closing connection and awaiting new connection.")
-			c.Close()
-			return false
-		}
-		response := string(bytes[0:3])
-		
-		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))//response should be ID=
-		if response != "ID=" {
-			goto RetryInit
-		}
-		
-		log.Println("Writing <ESC>PG1<CR> to TAP connection")
-		c.SetWriteDeadline(time.Now().Add(timeoutDuration))
-		_, err = c.Write([]byte(string(esc) + "PG1\r"))
-		if err != nil {
-			log.Printf("Error writing <ESC>PG1<CR> to TAP connection: %v\n", err.Error())
-			log.Println("Closing connection and awaiting new connection.")
-			c.Close()
-			return false
-		}
-		c.SetReadDeadline(time.Now().Add(timeoutDuration))
-		num, err = r.Read(bytes)
-		if err != nil {
+		log.Printf("Error reading response ID= from TAP connection: %v\n", err.Error())
+		log.Println("Closing connection and awaiting new connection.")
+		c.Close()
+		return false
+	}
+	response := string(bytes[0:3])
 
-			log.Printf("Error reading leading optional message response from TAP client: %v\n", err.Error())
-			log.Println("Closing connection and awaiting new connection.")
-			c.Close()
-			return false
-		}
-		response = string(bytes[0:num])
-		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))//response should be optional coded message<CR>
-		
-		c.SetReadDeadline(time.Now().Add(timeoutDuration))
-		num, err = r.Read(bytes)
-		if err != nil {
+	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be ID=
+	if response != "ID=" {
+		goto RetryInit
+	}
 
-			log.Printf("Error reading PG1 ack/nak response from TAP client: %v\n", err.Error())
-			log.Println("Closing connection and awaiting new connection.")
-			c.Close()
-			return false
-		}
-		response = string(bytes[0:num])
-		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))//response should be optional coded message<CR>
-		if strings.Contains(response, "[p") {
-			goto EndInit
-		 }
-		 		
-		c.SetReadDeadline(time.Now().Add(timeoutDuration))
-		num, err = r.Read(bytes)
-		if err != nil {
+	log.Println("Writing <ESC>PG1<CR> to TAP connection")
+	c.SetWriteDeadline(time.Now().Add(timeoutDuration))
+	_, err = c.Write([]byte(string(esc) + "PG1\r"))
+	if err != nil {
+		log.Printf("Error writing <ESC>PG1<CR> to TAP connection: %v\n", err.Error())
+		log.Println("Closing connection and awaiting new connection.")
+		c.Close()
+		return false
+	}
+	c.SetReadDeadline(time.Now().Add(timeoutDuration))
+	num, err = r.Read(bytes)
+	if err != nil {
 
-			log.Printf("Error reading optional or [p response from TAP connection: %v\n", err.Error())
-			log.Println("Closing connection and awaiting new connection.")
-			c.Close()
-			return false
-		}
-		response = string(bytes[0:num])
-		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))//response should be optional coded message<CR>
-		
-		if strings.Contains(response, "[p") {
-			goto EndInit
-		 }
-		
-		
-		c.SetReadDeadline(time.Now().Add(timeoutDuration))
-		num, err = r.Read(bytes)
-		if err != nil {
+		log.Printf("Error reading leading optional message response from TAP client: %v\n", err.Error())
+		log.Println("Closing connection and awaiting new connection.")
+		c.Close()
+		return false
+	}
+	response = string(bytes[0:num])
+	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
 
-			log.Printf("Error reading [p message response from TAP client: %v\n", err.Error())
-			log.Println("Closing connection and awaiting new connection.")
-			c.Close()
-			return false
-		}
-		response = string(bytes[0:num])
-		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))//response should be optional coded message<CR>
-		
-		if strings.Contains(response, "[p") {
-			goto EndInit
-		 }
-		EndInit:
-	
-		log.Print("TAP connection initialized\n\n")
+	c.SetReadDeadline(time.Now().Add(timeoutDuration))
+	num, err = r.Read(bytes)
+	if err != nil {
 
-return true
+		log.Printf("Error reading PG1 ack/nak response from TAP client: %v\n", err.Error())
+		log.Println("Closing connection and awaiting new connection.")
+		c.Close()
+		return false
+	}
+	response = string(bytes[0:num])
+	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+	if strings.Contains(response, "[p") {
+		goto EndInit
+	}
+
+	c.SetReadDeadline(time.Now().Add(timeoutDuration))
+	num, err = r.Read(bytes)
+	if err != nil {
+
+		log.Printf("Error reading optional or [p response from TAP connection: %v\n", err.Error())
+		log.Println("Closing connection and awaiting new connection.")
+		c.Close()
+		return false
+	}
+	response = string(bytes[0:num])
+	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+
+	if strings.Contains(response, "[p") {
+		goto EndInit
+	}
+
+	c.SetReadDeadline(time.Now().Add(timeoutDuration))
+	num, err = r.Read(bytes)
+	if err != nil {
+
+		log.Printf("Error reading [p message response from TAP client: %v\n", err.Error())
+		log.Println("Closing connection and awaiting new connection.")
+		c.Close()
+		return false
+	}
+	response = string(bytes[0:num])
+	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+
+	if strings.Contains(response, "[p") {
+		goto EndInit
+	}
+EndInit:
+
+	log.Print("TAP connection initialized\n\n")
+
+	return true
 
 }
 
 func handler(c net.Conn, parsedmsgsqueue chan string) {
 
-	
 	timeoutDuration := 5 * time.Second
 
 	r := bufio.NewReader(c)
 
-	init := false	
+	init := false
 	//cr := rune(13)
 	//esc := rune(27)
 	//ack := rune(6)
 	nak := rune(21)
 	//nullrune := rune(0)
 
-
-
+	bytes := make([]byte, 100)
+	var num int
 
 	for {
 
 		select {
 		case msg, ok := <-parsedmsgsqueue:
 			if ok {
-				init = initTap(c)//initialize tap server to receive messages
-				if init == false{
+				init = initTap(c) //initialize tap server to receive messages
+				if init == false {
 					log.Printf("Placing %v back on the TAP queue.\n", msg)
 					parsedmsgsqueue <- msg
 					log.Println("Closing connection and awaiting new connection.")
@@ -229,11 +226,10 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 					return
 				}
 
-			
 				log.Printf("Sent <%v> to TAP client\n", strconv.QuoteToASCII(tapmsg))
 				//fmt.Printf("\n\nTAP response:%v\n\n", strconv.QuoteToASCII(response)) //should be coded response
 				c.SetReadDeadline(time.Now().Add(timeoutDuration))
-				response, err := r.ReadString('\r')
+				num, err = r.Read(bytes)
 				if err != nil {
 					log.Printf("Error reading ack/nak response from TAP client: %v\n", err.Error())
 					log.Printf("Placing %v back on the TAP queue.\n", msg)
@@ -242,6 +238,8 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 					c.Close()
 					return
 				}
+
+				response := string(bytes[0:num])
 				//fmt.Printf("\n\nTAP response:%v\n\n", strings.Replace(strconv.QuoteToASCII(response), "\"", "", -1)) //should be ack/nak
 				if strings.Contains(response, string(nak)) {
 
@@ -250,15 +248,15 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 				}
 			}
 		default:
-			if init == true{
+			if init == true {
 				log.Println("No message to process on queue sleeping 5 sec...")
 				time.Sleep(5 * time.Second)
 				init = false
-			}else{
-			log.Println("No message to process on queue sleeping 5 sec...")
-			time.Sleep(5 * time.Second)
+			} else {
+				log.Println("No message to process on queue sleeping 5 sec...")
+				time.Sleep(5 * time.Second)
 			}
-			
+
 		}
 	}
 
