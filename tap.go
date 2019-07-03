@@ -193,6 +193,7 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 	//ack := rune(6)
 	nak := rune(21)
 	//nullrune := rune(0)
+	eot := rune(4)
 
 	bytes := make([]byte, 100)
 	var num int
@@ -251,12 +252,45 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 				}
 			}
 		default:
-			if init == true {
+			if init == true { //close transmission window and wait for messages to land on queue
 				init = false
+				log.Println("Sending End of Transmission")
+				c.SetWriteDeadline(time.Now().Add(timeoutDuration))
+				_, err := c.Write([]byte(string(eot) + "\r"))
+				if err != nil {
+					log.Printf("Error EOT writing msg to TAP connection: %v\n", err.Error())
+					log.Println("Closing connection and awaiting new connection.")
+					c.Close()
+					return
+				}
+
+				c.SetReadDeadline(time.Now().Add(timeoutDuration))
+				num, err = r.Read(bytes)
+				if err != nil {
+					log.Printf("Error reading EOT message response from TAP client: %v\n", err.Error())
+					log.Println("Closing connection and awaiting new connection.")
+					c.Close()
+					return
+				}
+
+				response := string(bytes[0:num])
+				log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+
+				c.SetReadDeadline(time.Now().Add(timeoutDuration))
+				num, err = r.Read(bytes)
+				if err != nil {
+					log.Printf("Error reading EOT response from TAP client: %v\n", err.Error())
+					log.Println("Closing connection and awaiting new connection.")
+					c.Close()
+					return
+				}
+
+				response = string(bytes[0:num])
+				log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be <ESC><EOT><CR>
 				log.Println("No message to process on queue sleeping 5 sec...")
 				time.Sleep(5 * time.Second)
 
-			} else {
+			} else { //wait for message to land on queue
 				log.Println("No message to process on queue sleeping 5 sec...")
 				time.Sleep(5 * time.Second)
 			}
