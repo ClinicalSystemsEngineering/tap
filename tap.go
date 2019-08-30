@@ -290,7 +290,7 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 				log.Println("No message to process on queue waiting for a message...")
 
 			} else { //wait for message to land on queue
-				log.Println("No message to process on queue waiting for a message...")
+				//log.Println("No message to process on queue waiting for a message...")
 
 			}
 
