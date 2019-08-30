@@ -287,12 +287,11 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 
 				response = string(bytes[0:num])
 				log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be <ESC><EOT><CR>
-				log.Println("No message to process on queue sleeping 5 sec...")
-				time.Sleep(5 * time.Second)
+				log.Println("No message to process on queue waiting for a message...")
 
 			} else { //wait for message to land on queue
-				log.Println("No message to process on queue sleeping 5 sec...")
-				time.Sleep(5 * time.Second)
+				log.Println("No message to process on queue waiting for a message...")
+
 			}
 
 		}
