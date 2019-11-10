@@ -300,9 +300,9 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 }
 
 //Server starts a Tap server using portnum as the port or 10001 if not specified
-func Server(msgchan chan string, portnum string) {
+func Server(msgchan chan string, portnum string, whitelist string) {
 	log.Printf("STARTING TAP listener on tcp port %v...\n\n", portnum)
-
+	log.Printf("TAP Whitelisted: %v\n", whitelist)
 	tap, err := net.Listen("tcp", ":"+portnum)
 	if err != nil {
 		//	fmt.Println("Error opening tap output, check log for details")
@@ -321,7 +321,22 @@ func Server(msgchan chan string, portnum string) {
 			tapconn.Close()
 
 		}
-		go handler(tapconn, msgchan)
+		//check if incoming connection is on the tap white list
+		addr, ok := tapconn.RemoteAddr().(*net.TCPAddr)
+		if !ok {
+			log.Fatal("Error reading incoming TAP connection ip address")
+		}
+
+		log.Printf("Received TAP connection request from %v\n", addr.IP.String())
+		// if not in the whitelist close the connecition
+		if addr.IP.String() != whitelist && whitelist != "127.0.0.1" {
+			log.Printf("Client ip %v not on whitelist. Closing connection.\n", addr.IP.String())
+			tapconn.Close()
+		} else //if on  the whitelist handle the connection
+		{
+			log.Printf("TAP Client ip %v accepted. Handling connection.\n", addr.IP.String())
+			go handler(tapconn, msgchan)
+		}
 	}
 	//==========================================================================
 }
