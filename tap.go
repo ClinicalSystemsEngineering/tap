@@ -209,7 +209,7 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 					if init == false { //there was an issue with init
 						log.Printf("Placing %v back on the TAP queue.\n", msg)
 						parsedmsgsqueue <- msg
-						log.Println("Closing connection and awaiting new connection.")
+						log.Println("Returning from connection handler and awaiting new connection.")
 						return
 					}
 				}
