@@ -200,7 +200,6 @@ EndInit:
 func handler(c net.Conn, parsedmsgsqueue chan string, verbose bool) {
 
 	timeoutDuration := 5 * time.Second
-	initTimer := time.NewTimer(timeoutDuration)
 
 	r := bufio.NewReader(c)
 
@@ -267,9 +266,9 @@ func handler(c net.Conn, parsedmsgsqueue chan string, verbose bool) {
 					time.Sleep(1 * time.Second)
 					goto RetryMsg
 				}
-				initTimer = time.NewTimer(timeoutDuration) //reset idle timer
+
 			}
-		case <-initTimer.C:
+		case <-time.After(timeoutDuration):
 			if init == true { //close transmission window and wait for messages to land on queue
 				init = false
 				if verbose {
@@ -315,10 +314,10 @@ func handler(c net.Conn, parsedmsgsqueue chan string, verbose bool) {
 				if verbose {
 					log.Println("No message to process on queue waiting for a message...")
 				}
-				initTimer = time.NewTimer(timeoutDuration) //reset idle time
+
 			} else { //wait for message to land on queue
 				//log.Println("No message to process on queue waiting for a message...")
-				initTimer = time.NewTimer(timeoutDuration) //reset idle timer
+
 			}
 
 		}
