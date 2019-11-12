@@ -316,8 +316,9 @@ func handler(c net.Conn, parsedmsgsqueue chan string, verbose bool) {
 				}
 
 			} else { //wait for message to land on queue
-				//log.Println("No message to process on queue waiting for a message...")
-
+				if verbose {
+					log.Println("No message to process on queue waiting for a message...")
+				}
 			}
 
 		}
