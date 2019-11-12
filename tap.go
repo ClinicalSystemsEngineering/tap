@@ -315,7 +315,7 @@ func handler(c net.Conn, parsedmsgsqueue chan string, verbose bool) {
 				if verbose {
 					log.Println("No message to process on queue waiting for a message...")
 				}
-
+				initTimer = time.NewTimer(timeoutDuration) //reset idle time
 			} else { //wait for message to land on queue
 				//log.Println("No message to process on queue waiting for a message...")
 				initTimer = time.NewTimer(timeoutDuration) //reset idle timer
