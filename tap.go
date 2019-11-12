@@ -46,7 +46,7 @@ func createtapmsg(pin string, textmsg string) string {
 }
 
 //Client starts a TAP client using server Adr
-func Client(msgchan chan string, serverAdr string) {
+func Client(msgchan chan string, serverAdr string, verbose bool) {
 
 	log.Printf("STARTING TAP Client to  %v...\n\n", serverAdr)
 	tap, err := net.Dial("tcp", serverAdr)
@@ -56,7 +56,7 @@ func Client(msgchan chan string, serverAdr string) {
 	}
 	defer tap.Close()
 	for {
-		handler(tap, msgchan)
+		handler(tap, msgchan, verbose)
 		tap.Close()
 		tap, err = net.Dial("tcp", serverAdr)
 		if err != nil {
@@ -66,7 +66,7 @@ func Client(msgchan chan string, serverAdr string) {
 	}
 
 }
-func initTap(c net.Conn) bool {
+func initTap(c net.Conn, verbose bool) bool {
 
 	timeoutDuration := 5 * time.Second
 
@@ -81,7 +81,10 @@ func initTap(c net.Conn) bool {
 	bytes := make([]byte, 100)
 
 RetryInit:
-	log.Println("Writing <CR> to TAP connection")
+	if verbose {
+		log.Println("Writing <CR> to TAP connection")
+	}
+
 	c.SetWriteDeadline(time.Now().Add(timeoutDuration))
 	_, err := c.Write([]byte("\r"))
 	if err != nil {
@@ -101,12 +104,17 @@ RetryInit:
 	}
 	response := string(bytes[0:3])
 
-	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be ID=
+	if verbose {
+		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))
+	} //response should be ID=
+
 	if response != "ID=" {
 		goto RetryInit
 	}
 
-	log.Println("Writing <ESC>PG1<CR> to TAP connection")
+	if verbose {
+		log.Println("Writing <ESC>PG1<CR> to TAP connection")
+	}
 	c.SetWriteDeadline(time.Now().Add(timeoutDuration))
 	_, err = c.Write([]byte(string(esc) + "PG1\r"))
 	if err != nil {
@@ -125,7 +133,9 @@ RetryInit:
 		return false
 	}
 	response = string(bytes[0:num])
-	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+	if verbose {
+		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))
+	} //response should be optional coded message<CR>
 
 	c.SetReadDeadline(time.Now().Add(timeoutDuration))
 	num, err = r.Read(bytes)
@@ -137,7 +147,9 @@ RetryInit:
 		return false
 	}
 	response = string(bytes[0:num])
-	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+	if verbose {
+		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))
+	} //response should be optional coded message<CR>
 	if strings.Contains(response, "[p") {
 		goto EndInit
 	}
@@ -152,7 +164,9 @@ RetryInit:
 		return false
 	}
 	response = string(bytes[0:num])
-	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+	if verbose {
+		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))
+	} //response should be optional coded message<CR>
 
 	if strings.Contains(response, "[p") {
 		goto EndInit
@@ -168,7 +182,9 @@ RetryInit:
 		return false
 	}
 	response = string(bytes[0:num])
-	log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+	if verbose {
+		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))
+	} //response should be optional coded message<CR>
 
 	if strings.Contains(response, "[p") {
 		goto EndInit
@@ -181,7 +197,7 @@ EndInit:
 
 }
 
-func handler(c net.Conn, parsedmsgsqueue chan string) {
+func handler(c net.Conn, parsedmsgsqueue chan string, verbose bool) {
 
 	timeoutDuration := 5 * time.Second
 
@@ -205,9 +221,9 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 			if ok {
 
 				if init == false {
-					init = initTap(c)  //initialize tap server to receive messages
-					if init == false { //there was an issue with init
-						log.Printf("Placing %v back on the TAP queue.\n", msg)
+					init = initTap(c, verbose) //initialize tap server to receive messages
+					if init == false {         //there was an issue with init
+						log.Printf("Error initializing TAP. Placing %v back on the TAP queue.\n", msg)
 						parsedmsgsqueue <- msg
 						log.Println("Returning from connection handler and awaiting new connection.")
 						return
@@ -254,7 +270,10 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 		default:
 			if init == true { //close transmission window and wait for messages to land on queue
 				init = false
-				log.Println("Sending End of Transmission")
+				if verbose {
+					log.Println("Sending End of Transmission")
+				}
+
 				c.SetWriteDeadline(time.Now().Add(timeoutDuration))
 				_, err := c.Write([]byte(string(eot) + "\r"))
 				if err != nil {
@@ -274,7 +293,9 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 				}
 
 				response := string(bytes[0:num])
-				log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be optional coded message<CR>
+				if verbose {
+					log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))
+				} //response should be optional coded message<CR>
 
 				c.SetReadDeadline(time.Now().Add(timeoutDuration))
 				num, err = r.Read(bytes)
@@ -286,8 +307,12 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 				}
 
 				response = string(bytes[0:num])
-				log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response)) //response should be <ESC><EOT><CR>
-				log.Println("No message to process on queue waiting for a message...")
+				if verbose {
+					log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))
+				} //response should be <ESC><EOT><CR>
+				if verbose {
+					log.Println("No message to process on queue waiting for a message...")
+				}
 
 			} else { //wait for message to land on queue
 				//log.Println("No message to process on queue waiting for a message...")
@@ -300,7 +325,7 @@ func handler(c net.Conn, parsedmsgsqueue chan string) {
 }
 
 //Server starts a Tap server using portnum as the port or 10001 if not specified
-func Server(msgchan chan string, portnum string, whitelist string) {
+func Server(msgchan chan string, portnum string, whitelist string, verbose bool) {
 	log.Printf("STARTING TAP listener on tcp port %v...\n\n", portnum)
 	log.Printf("TAP Whitelisted: %v\n", whitelist)
 	tap, err := net.Listen("tcp", ":"+portnum)
@@ -335,7 +360,7 @@ func Server(msgchan chan string, portnum string, whitelist string) {
 		} else //if on  the whitelist handle the connection
 		{
 			log.Printf("TAP Client ip %v accepted. Handling connection.\n", addr.IP.String())
-			go handler(tapconn, msgchan)
+			go handler(tapconn, msgchan, verbose)
 		}
 	}
 	//==========================================================================
