@@ -67,6 +67,7 @@ func Client(msgchan chan string, serverAdr string, verbose bool) {
 
 }
 
+//returns true of eot sent successful or false if failed
 func eotTap(c net.Conn, verbose bool) bool {
 	timeoutDuration := 5 * time.Second
 	eot := rune(4)
@@ -89,7 +90,6 @@ func eotTap(c net.Conn, verbose bool) bool {
 	num, err = r.Read(bytes)
 	if err != nil {
 		log.Printf("Error reading <EOT> optional message response from TAP client: %v\n", err.Error())
-
 		return false
 	}
 
@@ -115,6 +115,7 @@ func eotTap(c net.Conn, verbose bool) bool {
 	return true
 }
 
+//returns true of message was sent successful or false if failed
 func sendTap(c net.Conn, verbose bool, tapmsg string) bool {
 	timeoutDuration := 5 * time.Second
 	nak := rune(21)
@@ -150,6 +151,7 @@ RetryMsg:
 	return true
 }
 
+//returns true if init successful or false if failed
 func initTap(c net.Conn, verbose bool) bool {
 
 	timeoutDuration := 5 * time.Second
@@ -305,9 +307,9 @@ func handler(c net.Conn, parsedmsgsqueue chan string, verbose bool) {
 		case msg, ok := <-parsedmsgsqueue:
 			if ok {
 
-				if init == false {
+				if !init { //if not initialized
 					init = initTap(c, verbose) //initialize tap server to receive messages
-					if init == false {         //there was an issue with init
+					if !init {                 //there was an issue with init because it returned false
 						log.Printf("Error initializing TAP. Placing %v back on the TAP queue.\n", msg)
 						parsedmsgsqueue <- msg
 						log.Println("Closing connection and returning from connection handler to await new connection.")
