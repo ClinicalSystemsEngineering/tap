@@ -110,7 +110,7 @@ func eotTap(c net.Conn, verbose bool) bool {
 		log.Printf("TAP response:%v\n", strconv.QuoteToASCII(response))
 	} //response should be <ESC><EOT><CR>
 	if verbose {
-		log.Println("Endof Transmissioin sent succesful.")
+		log.Println("End of Transmission sent succesful.")
 	}
 	return true
 }
@@ -282,8 +282,9 @@ RetryInit:
 
 EndInit:
 
-	log.Print("TAP connection initialized\n\n")
-
+	if verbose {
+		log.Print("TAP connection initialized\n\n")
+	}
 	return true
 
 }
